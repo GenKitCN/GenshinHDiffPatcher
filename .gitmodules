@@ -1,0 +1,12 @@
+[submodule "includes/HDiffPatch"]
+	path = includes/HDiffPatch
+	url = https://github.com/sisong/HDiffPatch
+[submodule "includes/cxxopts"]
+	path = includes/cxxopts
+	url = https://github.com/jarro2783/cxxopts
+[submodule "includes/json"]
+	path = includes/json
+	url = https://github.com/nlohmann/json
+[submodule "includes/11Zip"]
+	path = includes/11Zip
+	url = https://github.com/Sygmei/11Zip
