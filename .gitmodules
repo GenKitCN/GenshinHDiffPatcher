@@ -7,6 +7,6 @@
 [submodule "includes/json"]
 	path = includes/json
 	url = https://github.com/nlohmann/json
-[submodule "includes/11Zip"]
-	path = includes/11Zip
-	url = https://github.com/Sygmei/11Zip
+[submodule "includes/spdlog"]
+	path = includes/spdlog
+	url = https://github.com/gabime/spdlog
