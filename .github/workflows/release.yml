@@ -18,7 +18,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup CPP
-      uses: aminya/setup-cpp@v1.1
+      uses: aminya/setup-cpp@v1
       with:
         architecture: ${{ matrix.arch }}
         cmake: true
