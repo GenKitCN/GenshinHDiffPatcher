@@ -27,8 +27,22 @@ jobs:
       run: cmake -GNinja -DCMAKE_BUILD_TYPE=Release -Bbuild
     - name: Ninja build
       run: cmake --build build
+    - name: Rename executable
+      run: |
+        if [[ "${{ matrix.os }}" == "Windows" ]]; then
+          mv build/genshin_patcher.exe build/genshin_patcher-${{ matrix.os }}_${{ matrix.arch }}.exe
+        elif [[ "${{ matrix.os }}" == "Linux" ]]; then
+          mv build/genshin_patcher build/genshin_patcher-${{ matrix.os }}_${{ matrix.arch }}
+        elif [[ "${{ matrix.os }}" == "Darwin" ]]; then
+          mv build/genshin_patcher build/genshin_patcher-${{ matrix.os }}_${{ matrix.arch }}
+        fi
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.1.1
       with:
         name: GHP_${{ matrix.os }}_${{ matrix.arch }}
         path: build/genshin_patcher*
+    - name: 2Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "build/genshin_patcher*"
+        allowUpdates: true
