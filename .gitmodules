@@ -1,15 +1,15 @@
 [submodule "includes/cxxopts"]
 	path = includes/cxxopts
-	url = https://github.com/jarro2783/cxxopts
+	url = git@github.com:jarro2783/cxxopts
 [submodule "includes/json"]
 	path = includes/json
-	url = https://github.com/nlohmann/json
+	url = git@github.com:nlohmann/json
 [submodule "includes/spdlog"]
 	path = includes/spdlog
-	url = https://github.com/gabime/spdlog
+	url = git@github.com:gabime/spdlog
 [submodule "includes/HDiffPatch"]
 	path = includes/HDiffPatch
-	url = https://github.com/sisong/HDiffPatchLite
+	url = git@github.com:sisong/HDiffPatchLite
 [submodule "includes/11Zip"]
 	path = includes/11Zip
-	url = https://github.com/Sygmei/11Zip
+	url = git@github.com:Sygmei/11Zip

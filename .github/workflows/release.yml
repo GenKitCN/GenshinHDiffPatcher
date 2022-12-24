@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        arch: [amd64, x86, arm64]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Setup Ninja
+      uses: ashutoshvarma/setup-ninja@v1.1
+    - name: Configure
+      run: cmake -GNinja -DCMAKE_BUILD_TYPE=Release -Bbuild
+    - name: Ninja build
+      run: cmake --build build
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v3.1.1
+      with:
+        name: GHP_${{ matrix.os }}_${{ matrix.arch }}
+        path: build/genshin_patcher*
