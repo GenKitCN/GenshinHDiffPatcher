@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
@@ -17,8 +17,12 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: Setup Ninja
-      uses: ashutoshvarma/setup-ninja@v1.1
+    - name: Setup CPP
+      uses: aminya/setup-cpp@v1.1
+      with:
+        architecture: ${{ matrix.arch }}
+        cmake: true
+        ninja: true
     - name: Configure
       run: cmake -GNinja -DCMAKE_BUILD_TYPE=Release -Bbuild
     - name: Ninja build

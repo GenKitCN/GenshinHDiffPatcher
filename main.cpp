@@ -24,13 +24,11 @@
 #define _kNULL_SIZE     (~(size_t)0)
 
 namespace fs = std::filesystem;
-bool _isInClear = false;
-int patchResult = 0;
 fs::path PROGRAM_DIR = fs::current_path();
 
 
 static TByte *getPatchMemCache(size_t mustAppendMemSize, hpatch_StreamPos_t oldDataSize, size_t *out_memCacheSize) {
-    TByte *temp_cache = 0;
+    TByte *temp_cache = nullptr;
     size_t temp_cache_size;
     size_t patchCacheSize = 1 << 22;
     {
@@ -52,14 +50,14 @@ static TByte *getPatchMemCache(size_t mustAppendMemSize, hpatch_StreamPos_t oldD
 }
 
 
-void hpatch(const std::filesystem::path &fromPth, const fs::path &diffPth, const fs::path &toPth) {
+int hpatch(const std::filesystem::path &fromPth, const fs::path &diffPth, const fs::path &toPth) {
     spdlog::info("Patching {}.", toPth.filename().string());
     const char *oldFilePathChar, *diffFilePathChar, *newFilePathChar;
     std::string oldFilePath = fromPth.string(),
             diffFilePath = diffPth.string(),
             newFilePath = toPth.string();
 
-
+    int patchResult = 0;
     oldFilePathChar = oldFilePath.c_str();
     diffFilePathChar = diffFilePath.c_str();
     newFilePathChar = newFilePath.c_str();
@@ -135,6 +133,27 @@ void hpatch(const std::filesystem::path &fromPth, const fs::path &diffPth, const
     check(hpatch_TFileStreamInput_close(&diffFileStream), 7, "close" + diffFilePath)
     check(hpatch_TFileStreamInput_close(&oldFileStream), 7, "close" + oldFilePath)
     _free_mem(temp_cache)
+
+    return patchResult;
+}
+
+
+bool askFor(const std::string& question, bool defaultValue = true)
+{
+    std::cout << question << " [" << (defaultValue ? "Yn" : "Ny") << "] ";
+    std::string response;
+    std::getline(std::cin, response);
+    if (response.empty()) {
+        return defaultValue;
+    }
+    if (response[0] == 'y' || response[0] == 'Y') {
+        return true;
+    } else if (response[0] == 'n' || response[0] == 'N') {
+        return false;
+    } else {
+        std::cerr << "Invalid response. Please enter 'y' or 'n'." << std::endl;
+        return askFor(question, defaultValue);
+    }
 }
 
 
@@ -179,13 +198,13 @@ int main(int argc, const char *argv[]) {
     try {
         // 解压zip文件
         for (auto &s: diffFiles) {
-            fs::path diffFolder;
+            fs::path diffFolder, extractDst;
             if (!fs::is_directory(s)) {
                 if (!fs::exists(tmp_dir)) {
                     spdlog::info("Creating folder \"tmp\" to store the extracted files.");
                 }
                 if (s.string().substr(s.string().find_last_of('.') + 1) != "zip") continue;
-                fs::path extractDst = tmp_dir / s.filename().string().substr(0, s.filename().string().length() - 4);
+                extractDst = tmp_dir / s.filename().string().substr(0, s.filename().string().length() - 4);
                 spdlog::info("Extracting {}...", s.filename().string());
                 elz::extractZip(s, extractDst);
                 spdlog::info(" -> {}", extractDst.string());
@@ -195,30 +214,32 @@ int main(int argc, const char *argv[]) {
             }
 
             // diff和delete列表
-            std::ifstream hdiffFileStream(diffFolder / "hdifffiles.txt");
-            std::ifstream deleteFileStream(diffFolder / "deletefiles.txt");
             std::vector<fs::path> hdiffFilesList;
             std::vector<fs::path> deleteFileList;
 
-            for (std::string line; getline(hdiffFileStream, line);) {
-                std::string hdiffFileString = nlohmann::json::parse(line)["remoteName"].get<std::string>() + ".hdiff";
-                fs::path hdiffFilePth = diffFolder / hdiffFileString;
-                hdiffFilesList.push_back(hdiffFilePth);
+            if ( fs::exists(diffFolder / "hdifffiles.txt") ) {
+                std::ifstream hdiffFileStream(diffFolder / "hdifffiles.txt");
+                for (std::string line; getline(hdiffFileStream, line);) {
+                    std::string hdiffFileString = nlohmann::json::parse(line)["remoteName"].get<std::string>() + ".hdiff";
+                    fs::path hdiffFilePth = diffFolder / hdiffFileString;
+                    hdiffFilesList.push_back(hdiffFilePth);
+                }
+                hdiffFileStream.close();
             }
-            if (patchRoot == gameRoot) {
+            if ( fs::exists(diffFolder / "deletefiles.txt") ) {
+                std::ifstream deleteFileStream(diffFolder / "deletefiles.txt");
                 for (std::string line; getline(deleteFileStream, line);) {
                     deleteFileList.emplace_back(gameRoot / line);
                 }
+                deleteFileStream.close();
             }
-
 
             // 处理不在hdiffFile里的文件
             for (const auto &entry: fs::recursive_directory_iterator(diffFolder)) {
                 if (entry.path().filename() == "hdifffiles.txt" ||
                     entry.path().filename() == "deletefiles.txt" ||
                     std::binary_search(hdiffFilesList.begin(), hdiffFilesList.end(), entry.path())
-                        )
-                    continue;
+                    ) continue;
 
                 fs::path dstFilePath = patchRoot / fs::relative(entry, diffFolder);
                 if (!fs::exists(dstFilePath)) {
@@ -234,7 +255,6 @@ int main(int argc, const char *argv[]) {
             // 处理位于hdiffFile的文件
             if (!exists(patchRoot)) fs::create_directories(patchRoot);
             for (const auto &h: hdiffFilesList) {
-                _isInClear = false;
                 try {
                     fs::path relative2root = fs::relative(h, diffFolder);
                     fs::path rawFilePath = relative2root.string().substr(0, relative2root.string().length() - 6);
@@ -244,8 +264,18 @@ int main(int argc, const char *argv[]) {
                 }
             }
 
+            if ( patchRoot != gameRoot ) { // safe-patch enabled
+                if ( !askFor("Do you want CLI to help you move the files?") ) goto do_del;
+                for ( const auto &di : fs::directory_iterator(patchRoot)) {
+                    fs::path copyDst = gameRoot / fs::relative(di, patchRoot);
+                    fs::copy_file(di, copyDst, fs::copy_options::recursive);
+                    if ( fs::exists(copyDst) ) fs::remove(di);
+                }
+            }
 
-            // 处理deletefiles
+            do_del: // 处理deletefiles
+            if ( deleteFileList.empty() ||
+                 !askFor("Do you want CLI to help you delete the files from \"deletefiles.txt\"?") ) goto del_extract_folder;
             for (const auto &d: deleteFileList) {
                 try {
                     fs::path relative2root = fs::relative(d, gameRoot);
@@ -255,14 +285,15 @@ int main(int argc, const char *argv[]) {
                     spdlog::error(e.what());
                 }
             }
+            // 删除临时解压目录
+            del_extract_folder:
+            if (fs::exists(extractDst)) {
+                spdlog::info("CClean up the temporary extracted folder: {}", extractDst.string());
+                fs::remove_all(extractDst);
+            }
         }
     } catch (const std::exception &e) {
         spdlog::warn(e.what());
-    }
-
-    if (fs::exists(PROGRAM_DIR / "tmp")) {
-        spdlog::info("Cleaning ./tmp dir");
-        fs::remove_all(PROGRAM_DIR / "tmp");
     }
 
     return 0;

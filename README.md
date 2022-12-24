@@ -1,65 +1,67 @@
 # GenshinHdiffPatcher
 
-[中文](README_zh.md) | [English](README.md)
+[中文](README.md) | [English](README_en.md)
 
-> Simple, modern and fast hdiff pack patch tool of certain anime game.
+> 简单、现代化、快速的原神更新包合并工具。
 
-<div style="text-align: center">[ Easy4Use · UltraFast · Detailed · LightWeight ]</div>
+<div style="text-align: center">[ 使用简单 · 疾速 · 过程详细 · 轻量 ]</div>
 
-## Quick start
+## 快速开始
 
-You can get executable files from the following places or compile it yourself.
+你可以从下方直接下载可执行文件，或者自己编译。
 
-### Prebuilt version
+### 预购建版本
 
-- [Release](/releases) \[recommend\]
-- [Actions](/actions)
+- [Release](https://github.com/Wansn-w/GenshinHDiffPatcher/releases) \[建议\]
+- [Actions](https://github.com/Wansn-w/GenshinHDiffPatcher/actions)
 
-### Compile
+### 编译
 
-#### Automatic compilation
+#### 自动
 
-You only need to run the batch file to build automatically.
-For Windows, you can use `build.bat`; for Unix, use `build.sh`.
+只需要执行批处理文件即可完成自动编译操作。Windows用`build.bat`，Unix用`build.sh` **Todo**
 
-#### Manual
+#### 手动
 
-1. Install the following dependencies
+1. 安装如下依赖
 
     - Cmake
-    - Ninja (CMake generator, **Optional**)
-    - gcc & g++ (They are usually pre-installed in unix, for Windows, you can use [MingW](https://www.mingw-w64.org/))
+    - Ninja (CMake生成器, **可选**)
+    - gcc & g++ (他们通常预装于unix系统中。对于Windows，可以使用 [MingW](https://www.mingw-w64.org/))
 
-2. Build
+2. 构建
 
-    If you do not have the above Ninja installed, please ignore the `-GNinja` option.
+   如果你没有安装上面的Ninja生成器，请忽略 `-GNinja` 参数。
 
     ```shell
     cmake -GNinja -DCMAKE_BUILD_TYPE=Release -Bbuild
     cmake --build build -j6
     ```
 
-   For machines with a small number of cores, you may need to reduce the number after the `-j` parameter appropriately.
+   对于CPU核心数量较少的机器，你可能需要降低`-j` 参数后面的数字大小。
 
-3. enjoy
-   The final executable file is located in the project-folder/build directory.
+3. 完成
+   最终生成的可执行文件位于 项目文件夹/build 目录中。
 
-   
-### Usage
 
-You can enter the game path in the first parameter, such as "N:\\ Genshin Impact\", and then enter the path of the game differential package in the later parameters, such as "K:\\ game_3.2.0_3.3.0_hdiff_fiuTl2cLqp198WVG.zip".
-The differential package path can be either a zip file or an unzipped path.
+### 用法
+
+你可以在第一个参数中填入游戏路径,例如"N:\\Genshin Impact\\",然后在之后的参数中填入游戏差分包的路径,如"K:\\game_3.2.0_3.3.0_hdiff_fiuTl2cLqp198WVG.zip"。 差分包路径既可以是一个zip文件,也可以是解压后的路径.
 
 ```
 Automatically update certain anime game's hdiff package command line
 Usage:
   GenshinPatcher [OPTION...] <gameDir> <diffFiles> [diffFiles2] [diffFiles3]...
 
-  -s, --safe-patch  Run the patch safely.
-  -h, --help        Show this msg
+  -s, --safe-patch  安全地进行修补。你仍需要手动替换文件。
+  -h, --help        展示这个消息。
 ```
 
 ### Credit
 
 - [ChatGPT](https://chat.openai.com) - For batch scripting and other help.
 - [HDiffPatch](https://github.com/sisong/HDiffPatch) - The difference method used in Genshin games.
+
+
+
+

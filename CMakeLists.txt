@@ -3,7 +3,6 @@ project(genshin_patcher)
 
 set(CMAKE_CXX_STANDARD 17)
 set(ZIPPER_PATH includes/zipper)
-# set(CMAKE_CXX_FLAGS -s)
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
