@@ -9,7 +9,7 @@
 	url = git@github.com:gabime/spdlog
 [submodule "includes/HDiffPatch"]
 	path = includes/HDiffPatch
-	url = git@github.com:sisong/HDiffPatchLite
+	url = git@github.com:sisong/HDiffPatch
 [submodule "includes/11Zip"]
 	path = includes/11Zip
 	url = git@github.com:Sygmei/11Zip
