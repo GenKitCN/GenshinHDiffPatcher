@@ -26,19 +26,21 @@ jobs:
       run: cmake -GNinja -DCMAKE_BUILD_TYPE=Release -Bbuild
     - name: Ninja build
       run: cmake --build build
-    - name: [Win] Rename executable
-      if: "${{ matrix.os }}" == "Windows"
-      run: ren build/genshin_patcher.exe patcher_windows-latest_amd64.exe
-    - name: [Unix] Rename executable
-      if: "${{ matrix.os }}" != "Windows"
-      run: mv build/genshin_patcher build/patcher_${{ matrix.os }}_${{ matrix.arch }}
+    - uses: haya14busa/action-cond@v1
+      id: get_command
+      with:
+        cond: ${{ matrix.os == 'windows-latest' }}
+        if_true: "ren build/genshin_patcher.exe patcher_windows-latest.exe"
+        if_false: "mv build/genshin_patcher build/patcher_${{ matrix.os }}"
+    - name: Rename executable
+      run: ${{ steps.get_command.outputs.value }}
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.1.1
       with:
-        name: GHP_${{ matrix.os }}_${{ matrix.arch }}
-        path: build/genshin_patcher*
+        name: GHP_${{ matrix.os }}
+        path: build/patcher*
     - name: 2Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "build/genshin_patcher*"
+        artifacts: "build/patcher*"
         allowUpdates: true
