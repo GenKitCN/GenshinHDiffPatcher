@@ -11,7 +11,6 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
-        arch: [amd64, x86, arm64]
 
     steps:
     - uses: actions/checkout@v3
@@ -27,15 +26,12 @@ jobs:
       run: cmake -GNinja -DCMAKE_BUILD_TYPE=Release -Bbuild
     - name: Ninja build
       run: cmake --build build
-    - name: Rename executable
-      run: |
-        if [[ "${{ matrix.os }}" == "Windows" ]]; then
-          mv build/genshin_patcher.exe build/genshin_patcher-${{ matrix.os }}_${{ matrix.arch }}.exe
-        elif [[ "${{ matrix.os }}" == "Linux" ]]; then
-          mv build/genshin_patcher build/genshin_patcher-${{ matrix.os }}_${{ matrix.arch }}
-        elif [[ "${{ matrix.os }}" == "Darwin" ]]; then
-          mv build/genshin_patcher build/genshin_patcher-${{ matrix.os }}_${{ matrix.arch }}
-        fi
+    - name: [Win] Rename executable
+      if: "${{ matrix.os }}" == "Windows"
+      run: ren build/genshin_patcher.exe patcher_windows-latest_amd64.exe
+    - name: [Unix] Rename executable
+      if: "${{ matrix.os }}" != "Windows"
+      run: mv build/genshin_patcher build/patcher_${{ matrix.os }}_${{ matrix.arch }}
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.1.1
       with:

@@ -53,9 +53,11 @@ static TByte *getPatchMemCache(size_t mustAppendMemSize, hpatch_StreamPos_t oldD
 int hpatch(const std::filesystem::path &fromPth, const fs::path &diffPth, const fs::path &toPth) {
     spdlog::info("Patching {}.", toPth.filename().string());
     const char *oldFilePathChar, *diffFilePathChar, *newFilePathChar;
+    if ( !exists(toPth.parent_path()) ) fs::create_directories(toPth.parent_path());
     std::string oldFilePath = fromPth.string(),
             diffFilePath = diffPth.string(),
             newFilePath = toPth.string();
+    spdlog::debug("Print me the args\nold: {}\ndiff: {}\nnew: {}", oldFilePath, diffFilePath, newFilePath);
 
     int patchResult = 0;
     oldFilePathChar = oldFilePath.c_str();
@@ -99,9 +101,9 @@ int hpatch(const std::filesystem::path &fromPth, const fs::path &diffPth, const 
     }
     check(hpatch_TFileStreamOutput_open(&newFileStream, newFilePathChar, savedNewSize),
           3, "open out newFile for write")
-    spdlog::info("HDiff | oldDataSize: {:d}", poldData->streamSize);
-    spdlog::info("HDiff | diffDataSize: {:d}", diffFileStream.base.streamSize);
-    spdlog::info("HDiff | newDataSize: {:d}", newFileStream.base.streamSize);
+    spdlog::debug("HDiff | oldDataSize: {:d}", poldData->streamSize);
+    spdlog::debug("HDiff | diffDataSize: {:d}", diffFileStream.base.streamSize);
+    spdlog::debug("HDiff | newDataSize: {:d}", newFileStream.base.streamSize);
 
     {
         hpatch_StreamPos_t maxWindowSize = poldData->streamSize;
@@ -158,14 +160,13 @@ bool askFor(const std::string& question, bool defaultValue = true)
 
 
 int main(int argc, const char *argv[]) {
-
+    int return_v = 0;
     cxxopts::Options parser("GenshinPatcher", "Automatically update certain anime game's hdiff package command line");
     parser.add_options()
             ("gameDir", "Path of GenshinImpact", cxxopts::value<std::string>())
             ("diffFiles", "HDiff package", cxxopts::value<std::vector<std::string>>())
-            ("s,safe-patch", "Run the patch safely.", cxxopts::value<bool>())
-            ("f,force-del",
-             "Forces the file to be deleted according to  deletefiles.txt, even though --safe-patch is specified.")
+            ("s,safe-patch", "Run the patch safely. Note that you still need to copy files yourself.", cxxopts::value<bool>())
+            ("d,debug", "debug mode")
             ("h,help", "Show this msg");
     parser.positional_help("<gameDir> <diffFiles> [diffFiles2] [diffFiles3]...");
     parser.parse_positional({"gameDir", "diffFiles"});
@@ -175,14 +176,17 @@ int main(int argc, const char *argv[]) {
     try {
         auto args = parser.parse(argc, argv);
         gameRoot = fs::path(args["gameDir"].as<std::string>());
-        if (args["safe-patch"].as<bool>()) {
-            patchRoot = gameRoot / "temp";
-        } else patchRoot = gameRoot;
-        diffFilesString = args["diffFiles"].as<std::vector<std::string>>();
         if (args.count("help")) {
             std::cout << parser.help() << std::endl;
             return 0;
         }
+        if (args.count("debug")) {
+            spdlog::set_level(spdlog::level::debug);
+        }
+        if (args["safe-patch"].as<bool>()) {
+            patchRoot = gameRoot / "temp";
+        } else patchRoot = gameRoot;
+        diffFilesString = args["diffFiles"].as<std::vector<std::string>>();
     } catch ( cxxopts::exceptions::option_has_no_value &e) {
         spdlog::error(e.what());
         std::cout << parser.help();
@@ -235,7 +239,7 @@ int main(int argc, const char *argv[]) {
             }
 
             // 处理不在hdiffFile里的文件
-            for (const auto &entry: fs::recursive_directory_iterator(diffFolder)) {
+            for (const auto &entry: fs::directory_iterator(diffFolder)) {
                 if (entry.path().filename() == "hdifffiles.txt" ||
                     entry.path().filename() == "deletefiles.txt" ||
                     std::binary_search(hdiffFilesList.begin(), hdiffFilesList.end(), entry.path())
@@ -244,9 +248,11 @@ int main(int argc, const char *argv[]) {
                 fs::path dstFilePath = patchRoot / fs::relative(entry, diffFolder);
                 if (!fs::exists(dstFilePath)) {
                     if (entry.is_directory()) {
-                        fs::copy(entry, dstFilePath, fs::copy_options::update_existing);
+                        spdlog::info("Copying {} directory..", entry.path().string());
+                        fs::copy(entry, dstFilePath, fs::copy_options::recursive | fs::copy_options::update_existing);
                     } else {
                         fs::create_directories(dstFilePath.parent_path());
+                        spdlog::info("Copying {} ..", entry.path().string());
                         fs::copy_file(entry, dstFilePath, fs::copy_options::update_existing);
                     }
                 }
@@ -258,18 +264,34 @@ int main(int argc, const char *argv[]) {
                 try {
                     fs::path relative2root = fs::relative(h, diffFolder);
                     fs::path rawFilePath = relative2root.string().substr(0, relative2root.string().length() - 6);
+                    spdlog::debug("======debug======\nPath: {}\ndiff: {}\nnew:\n=======arg=======",
+                                  (gameRoot / rawFilePath).string(), h.string(), (patchRoot / rawFilePath).string());
                     hpatch(gameRoot / rawFilePath, h, patchRoot / rawFilePath);
                 } catch (const std::exception &e) {
                     spdlog::error(e.what());
+                    return_v = 4;
                 }
             }
 
+            /* Temporarily disabled due to copy_options::update_existing not working properly due to unknown issue
             if ( patchRoot != gameRoot ) { // safe-patch enabled
                 if ( !askFor("Do you want CLI to help you move the files?") ) goto do_del;
                 for ( const auto &di : fs::directory_iterator(patchRoot)) {
                     fs::path copyDst = gameRoot / fs::relative(di, patchRoot);
-                    fs::copy_file(di, copyDst, fs::copy_options::recursive);
-                    if ( fs::exists(copyDst) ) fs::remove(di);
+                    try {
+                        if (di.is_directory()) {
+                            spdlog::info("Copy2game | Copying {} directory..", di.path().string());
+                            fs::copy(di, copyDst, fs::copy_options::recursive | fs::copy_options::update_existing);
+                        } else {
+                            fs::create_directories(copyDst.parent_path());
+                            spdlog::info("Copy2game | Copying {} ..", di.path().string());
+                            fs::copy_file(di, copyDst, fs::copy_options::update_existing);
+                        }
+                        if ( fs::exists(copyDst) ) fs::remove(di);
+                    } catch ( std::exception &e) {
+                        spdlog::error(e.what());
+                        return_v = 5;
+                    }
                 }
             }
 
@@ -280,11 +302,15 @@ int main(int argc, const char *argv[]) {
                 try {
                     fs::path relative2root = fs::relative(d, gameRoot);
                     spdlog::info("Deleting {}.", relative2root.string());
+                    if ( !exists(d) ) {
+                        spdlog::warn("{}@{} not exists! skipping.", fs::is_directory(d) ? "Directory": "File", d.string());
+                        continue; }
                     fs::remove(d);
                 } catch (fs::filesystem_error::exception &e) {
                     spdlog::error(e.what());
+                    return_v = 3;
                 }
-            }
+            } */
             // 删除临时解压目录
             del_extract_folder:
             if (fs::exists(extractDst)) {
@@ -294,7 +320,8 @@ int main(int argc, const char *argv[]) {
         }
     } catch (const std::exception &e) {
         spdlog::warn(e.what());
+        return_v = 2;
     }
 
-    return 0;
+    return return_v;
 }
