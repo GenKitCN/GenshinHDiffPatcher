@@ -1,12 +1,3 @@
-[submodule "includes/cxxopts"]
-	path = includes/cxxopts
-	url = git@github.com:jarro2783/cxxopts
-[submodule "includes/json"]
-	path = includes/json
-	url = git@github.com:nlohmann/json
-[submodule "includes/spdlog"]
-	path = includes/spdlog
-	url = git@github.com:gabime/spdlog
 [submodule "includes/HDiffPatch"]
 	path = includes/HDiffPatch
 	url = git@github.com:sisong/HDiffPatch

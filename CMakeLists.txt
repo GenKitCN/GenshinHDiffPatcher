@@ -13,10 +13,8 @@ add_subdirectory(includes/11Zip)
 include_directories(
         includes
         includes/HDiffPatch
-        includes/json/include
         includes/11Zip/include
         includes/spdlog/include
-        includes/cxxopts/include
         includes/HDiffPatch/libHDiffPatch
 )
 
