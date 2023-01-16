@@ -1,9 +1,8 @@
-name: Release
+name: Debug
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [ "master" ]
 
 jobs:
   build:
@@ -37,9 +36,5 @@ jobs:
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.1.1
       with:
-        name: GHP_${{ matrix.os }}
+        name: DEBUG_${{ matrix.os }}
         path: build/patcher*
-    - name: 2Release
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: "build/patcher*"
