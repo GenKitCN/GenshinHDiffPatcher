@@ -2,4 +2,5 @@
 build/
 cmake-build-debug/
 cmake-build-release/
-includes/11Zip/
+includes/11Zip
+includes/11Zip/*

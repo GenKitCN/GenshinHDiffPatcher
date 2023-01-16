@@ -50,6 +50,38 @@ static TByte *getPatchMemCache(size_t mustAppendMemSize, hpatch_StreamPos_t oldD
 }
 
 
+void asset_copy(const std::filesystem::path& from, const std::filesystem::path& to)
+{
+    std::ifstream src(from, std::ios::binary);
+    std::ofstream dst(to, std::ios::binary);
+
+    if(!src) throw std::runtime_error("Failed to open source file: " + from.string());
+    if(!dst) throw std::runtime_error("Failed to open destination file: " + to.string());
+
+    dst << src.rdbuf();
+}
+
+
+void assets_copy(const fs::path &from, const fs::path &to) {
+    for ( const auto &i : fs::recursive_directory_iterator(from) ) {
+        fs::path relative_path = fs::relative(i, from);
+        if (i.is_directory()) {
+            try {
+                fs::create_directories(to / relative_path);
+            } catch ( fs::filesystem_error::exception &e ) {
+                std::cout << e.what() << std::endl;
+            }
+            continue;
+        }
+        try {
+            asset_copy(i, to / relative_path);
+        } catch ( std::runtime_error &e ) {
+            spdlog::error(e.what());
+        }
+    }
+}
+
+
 int hpatch(const std::filesystem::path &fromPth, const fs::path &diffPth, const fs::path &toPth) {
     spdlog::info("Patching {}.", toPth.filename().string());
     const char *oldFilePathChar, *diffFilePathChar, *newFilePathChar;
@@ -165,7 +197,7 @@ int main(int argc, const char *argv[]) {
     parser.add_options()
             ("gameDir", "Path of GenshinImpact", cxxopts::value<std::string>())
             ("diffFiles", "HDiff package", cxxopts::value<std::vector<std::string>>())
-            ("s,safe-patch", "Run the patch safely. Note that you still need to copy files yourself.", cxxopts::value<bool>())
+            ("s,safe-patch", "Run the patch safely.", cxxopts::value<bool>())
             ("d,debug", "debug mode")
             ("h,help", "Show this msg");
     parser.positional_help("<gameDir> <diffFiles> [diffFiles2] [diffFiles3]...");
@@ -249,11 +281,11 @@ int main(int argc, const char *argv[]) {
                 if (!fs::exists(dstFilePath)) {
                     if (entry.is_directory()) {
                         spdlog::info("Copying {} directory..", entry.path().string());
-                        fs::copy(entry, dstFilePath, fs::copy_options::recursive | fs::copy_options::update_existing);
+                        assets_copy(entry, dstFilePath);
                     } else {
                         fs::create_directories(dstFilePath.parent_path());
                         spdlog::info("Copying {} ..", entry.path().string());
-                        fs::copy_file(entry, dstFilePath, fs::copy_options::update_existing);
+                        asset_copy(entry, dstFilePath);
                     }
                 }
             }
@@ -273,7 +305,6 @@ int main(int argc, const char *argv[]) {
                 }
             }
 
-            /* Temporarily disabled due to copy_options::update_existing not working properly due to unknown issue
             if ( patchRoot != gameRoot ) { // safe-patch enabled
                 if ( !askFor("Do you want CLI to help you move the files?") ) goto do_del;
                 for ( const auto &di : fs::directory_iterator(patchRoot)) {
@@ -281,11 +312,11 @@ int main(int argc, const char *argv[]) {
                     try {
                         if (di.is_directory()) {
                             spdlog::info("Copy2game | Copying {} directory..", di.path().string());
-                            fs::copy(di, copyDst, fs::copy_options::recursive | fs::copy_options::update_existing);
+                            assets_copy(di, copyDst);
                         } else {
                             fs::create_directories(copyDst.parent_path());
                             spdlog::info("Copy2game | Copying {} ..", di.path().string());
-                            fs::copy_file(di, copyDst, fs::copy_options::update_existing);
+                            asset_copy(di, copyDst);
                         }
                         if ( fs::exists(copyDst) ) fs::remove(di);
                     } catch ( std::exception &e) {
@@ -310,7 +341,8 @@ int main(int argc, const char *argv[]) {
                     spdlog::error(e.what());
                     return_v = 3;
                 }
-            } */
+            }
+
             // 删除临时解压目录
             del_extract_folder:
             if (fs::exists(extractDst)) {

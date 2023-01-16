@@ -43,4 +43,3 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "build/patcher*"
-        allowUpdates: true
